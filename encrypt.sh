@@ -4,40 +4,35 @@
 SRC=$1
 DEST=$2
 GPG_RECIPIENT="max@froumentin.net"
-REFTIMEFILE=$DEST/reftime
 
 # TODO:
 # - test suite
-# - possible name conflicts with reftime
 # - dry-run option
-# - symlinks
+# - symlinks ?
 
 function encrypt() {
-    echo Encrypting $1
-echo    nice gpg --batch --yes --recipient $GPG_RECIPIENT --output "$DEST/$1.enc" --encrypt "$1"
+    echo "* Encrypting $1"
+    nice gpg --batch --yes --recipient $GPG_RECIPIENT --output "$DEST/$1.enc" --encrypt "$1"
 }
 export -f encrypt
 
-# recreate directory structure TODO: necessary each time?
+# recreate directory structure
 function copy_dirs() {
     echo Copying directory structure
     find $SRC -type d -exec mkdir -p ${DEST}/{} \;
 }
 
-#if there's a reftime file, copy+encrypt only the files that changed since the last modified time of reftime
+# encrypt all files that haven't been yet or that are newer than their existing encrypted version
 function copy_encrypt() {
-    if [ -e $REFTIMEFILE ]; then
-        echo Encrypting all files that have changed since the last sync on `stat -f %Sm $REFTIMEFILE`
-        cp $DEST/reftime /tmp/newreftime
-        find $SRC -type f -newer $DEST/reftime -exec bash -c 'encrypt "{}"' \;
-        mv /tmp/newreftime $DEST/reftime
-    else
-        # otherwise encrypt+copy everything
-        echo Encrypting all files in $DEST/$SRC
-        touch $DEST/reftime
-        find $SRC -type f -exec bash -c 'encrypt "{}"' \;
-    fi
-    echo Finished.
+    echo Encrypting new or recently modified files
+    find $SRC  -type f | while read source_file; do
+        # look if this file is encrypted
+        prefix=$SRC
+        target_file=$DEST/${source_file}.enc
+        if [[ ! -f $target_file || ($source_file -nt $target_file) ]]; then
+            encrypt $source_file
+        fi
+    done
 }
 
 function delete_extra_files() {
