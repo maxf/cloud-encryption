@@ -1,6 +1,10 @@
 #!/bin/sh
 
-# TODO check arguments
+if [ "$#" -ne 2 ]; then
+    echo "Usage: $0 source_directory target_directory"
+    exit
+fi
+
 SRC=$1
 DEST=$2
 GPG_RECIPIENT="max@froumentin.net"
