@@ -15,54 +15,54 @@ GPG_RECIPIENT="max@froumentin.net"
 # - symlinks ?
 
 function encrypt() {
-    echo "* Encrypting $1"
-    nice gpg --batch --yes --recipient $GPG_RECIPIENT --output "$DEST/$1.enc" --encrypt "$1"
+    echo "* Encrypting $1 to $2"
+    nice gpg --batch --yes --recipient $GPG_RECIPIENT --output "$2" --encrypt "$1"
 }
 export -f encrypt
 
 # recreate directory structure
 function copy_dirs() {
     echo Copying directory structure
-    find $SRC -type d -exec mkdir -p ${DEST}/{} \;
+    mkdir -p $DEST
+    find $SRC/* -type d | while read source_dir; do
+        mkdir -p ${DEST}/${source_dir#$SRC/}
+    done
 }
 
 # encrypt all files that haven't been yet or that are newer than their existing encrypted version
 function copy_encrypt() {
     echo Encrypting new or recently modified files
-    find $SRC  -type f | while read source_file; do
+    find $SRC -type f | while read source_file; do
         # look if this file is encrypted
-        prefix=$SRC
-        target_file=$DEST/${source_file}.enc
+        target_file=$DEST/${source_file#$SRC/}.enc
         if [[ ! -f $target_file || ($source_file -nt $target_file) ]]; then
-            encrypt $source_file
+            encrypt $source_file $target_file
         fi
     done
 }
 
-function delete_extra_files() {
-    echo Looking for deleted directories in source
-    find $DEST/$SRC -type d | while read dir; do
-        prefix=$DEST/
-        name=${dir#$prefix}
-        if ! [ -e $name ]; then
-            echo removing dir $dir
-            rm -r $dir
+function delete_extra_files_in_dest() {
+    echo Looking for deleted dirs in source and delete corresponding dirs in destination
+    find $DEST/* -type d | while read dirname_in_dest; do
+        dirname_in_source=$SRC/${dirname_in_dest#$DEST/}
+        if ! [ -e $dirname_in_source ]; then
+            echo removing dir $dirname_in_dest
+            rm -rf $dir
         fi
     done
 
-    echo Looking for deleted files in source
-    find $DEST/$SRC -type f | while read file; do
+    echo Looking for deleted files in source and delete corresponding encrypted files
+    find $DEST -type f | while read filename_in_dest; do
         suffix=".enc"
-        prefix=$DEST/
-        name=${file#$prefix}
-        name=${name%$suffix}
-        if ! [ -e $name ]; then
-                echo removing file $file
-                rm $file
+        filename_in_source=${filename_in_dest#$DEST/}
+        filename_in_source=${name%$suffix}
+        if ! [ -e $filename_in_source ]; then
+            echo removing file $filename_in_dest
+            rm -f $filename_in_dest
         fi
     done
 }
 
 copy_dirs
 copy_encrypt
-delete_extra_files
+delete_extra_files_in_dest
