@@ -26,4 +26,4 @@ There are many existing solutions to do this. Here are a few I've found and why 
 
 - spideroak: the one I currently use. Same drawbacks as above, though. And also it uses a lot of bandwidth, unnecessarily.
 
-Duplicity would be the closest to what this script tries to do. But it's too backup-orientated: it compresses all the file into a big lump and synchronises that, followed by incremental changes. Not very good for synchronising.
+Duplicity would be the closest to what this script tries to do. But it's too backup-orientated: it compresses all the file into a big lump and synchronises that, followed by incremental changes. Not very good for synchronising. Also it's designed to restore where you've backed-up: syncing to another machine will cause permission problems.
